@@ -1,0 +1,82 @@
+# Plantilla AWS SAM para el proyecto hello_word
+AWSTemplateFormatVersion: '2010-09-09' # Versión del formato de plantilla de AWS
+Transform: AWS::Serverless-2016-10-31 # Indica que se usa el transformador SAM para recursos serverless
+# Descripción de la plantilla
+Description: >
+  hello_word
+  Sample SAM Template for hello_word
+  Mi primer deploy con SAM.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3 # Tiempo máximo de ejecución (en segundos) para las funciones Lambda
+
+Resources:
+  # Definición de la función Lambda principal
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # Recurso de función Lambda administrado por SAM
+    Properties:
+      CodeUri: hello-world/ # Carpeta donde está el código fuente de la función
+      Handler: app.lambdaHandler # Punto de entrada de la función Lambda
+      Runtime: nodejs18.x # Entorno de ejecución de Node.js versión 18
+      Architectures:
+        - x86_64 # Arquitectura de la función (x86_64) [x86_64, arm64]
+      Events:
+        # Eventos API Gateway
+        HelloWorld:
+          Type: Api # Evento que dispara la función (API Gateway) [Api, S3, SNS, SQS, Schedule, S3, SNS, SQS, Schedule]
+          Properties:
+            Path: /hello # Ruta del endpoint
+            Method: get # Método HTTP permitido [get, post, put, delete, options, head, patch]
+        # Nuevos elementos
+        GetUser:
+          Type: Api
+          Properties:
+            Path: /user/{id}
+            Method: get
+        CreateUser:
+          Type: Api
+          Properties:
+            Path: /user
+            Method: post
+        ShowAllUsers:
+          Type: Api
+          Properties:
+            Path: /users
+            Method: get
+        # Eventos Schedule [EventBridge]
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Name: daily-user-check-every-day
+            Schedule: cron(0 5 * * ? *) # todos los días a las 5:00 AM
+        DailySchedule2:
+          Type: Schedule
+          Properties:
+            Name: daily-user-check-every-minute
+            Schedule: cron(* * * * ? *) # cada minuto
+
+    Metadata: # Propiedades para la construcción con esbuild
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true # Minimiza el código al construir
+        Target: 'es2020' # Objetivo de versión de ECMAScript [es2020, es2021, es2022]
+        Sourcemap: true # Genera sourcemaps para depuración
+        EntryPoints:
+          - app.ts # Archivo de entrada principal
+
+# Salidas de la plantilla
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: 'API Gateway endpoint URL for Prod stage for Hello World function' # URL del endpoint de la API
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/'
+  HelloWorldFunction:
+    Description: 'Hello World Lambda Function ARN' # ARN de la función Lambda creada
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: 'Implicit IAM Role created for Hello World function' # Rol IAM creado automáticamente para la función
+    Value: !GetAtt HelloWorldFunctionRole.Arn # ARN del rol IAM creado para la función
