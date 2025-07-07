@@ -57,6 +57,15 @@ export const userHandler = async (event: APIGatewayProxyEvent): Promise<APIGatew
             };
         }
 
+        // Otra ruta diferente
+        console.group('Solicitud no procesada - Detalles de la peticion');
+        console.log('Path:', path);
+        console.log('HttpMethod:', httpMethod);
+        console.log('PathParameters:', pathParameters);
+        console.log('QueryStringParameters:', queryStringParameters);
+        console.log('Body:', body);
+        console.groupEnd();
+
         // ? Si no es get o post, devolver un error
         return {
             statusCode: 400,

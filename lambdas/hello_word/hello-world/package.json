@@ -14,7 +14,9 @@
         "dev": "sam build --template-file ../template.yaml --build-dir ../.aws-sam/build && sam local start-api --template ../.aws-sam/build/template.yaml",
         "dev-nodemon": "nodemon --watch hello-world --exec \"sam build --template-file ../template.yaml --build-dir ../.aws-sam/build && sam local start-api --template ../.aws-sam/build/template.yaml\"",
         "dev-event-schedule": "sam build --template-file ../template.yaml --build-dir ../.aws-sam/build && sam local invoke HelloWorldFunction --template ../.aws-sam/build/template.yaml --event ../events/event.json",
-        "dev-event-schedule-2": "sam build --template-file ../template.yaml --build-dir ../.aws-sam/build && sam local invoke HelloWorldFunction --template ../.aws-sam/build/template.yaml --event ../events/event-schedule_2.json"
+        "dev-event-schedule-2": "sam build --template-file ../template.yaml --build-dir ../.aws-sam/build && sam local invoke HelloWorldFunction --template ../.aws-sam/build/template.yaml --event ../events/event-schedule_2.json",
+        "dev-event-sqs": "sam build --template-file ../template.yaml --build-dir ../.aws-sam/build && sam local invoke HelloWorldFunction --template ../.aws-sam/build/template.yaml --event ../events/event-sqs.json",
+        "dev-event-api": "sam build --template-file ../template.yaml --build-dir ../.aws-sam/build && sam local invoke HelloWorldFunction --template ../.aws-sam/build/template.yaml --event ../events/api/api-get-user.json"
     },
     "dependencies": {
         "esbuild": "^0.14.14"

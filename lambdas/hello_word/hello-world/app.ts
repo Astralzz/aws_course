@@ -1,6 +1,7 @@
-import type { APIGatewayProxyEvent, APIGatewayProxyResult, ScheduledEvent } from 'aws-lambda';
+import type { APIGatewayProxyEvent, APIGatewayProxyResult, ScheduledEvent, SQSEvent } from 'aws-lambda';
 import { router } from './routes/router';
 import { awsEventBridgeHandler } from './handlers/event.handler';
+import { showEnvironment } from './utils/environment';
 
 /**
  * Manejador principal de la función Lambda para AWS API Gateway.
@@ -13,8 +14,13 @@ import { awsEventBridgeHandler } from './handlers/event.handler';
  * Documentación de eventos: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
  * Documentación de retorno: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
  */
-export const lambdaHandler = async (event: APIGatewayProxyEvent | ScheduledEvent): Promise<APIGatewayProxyResult> => {
+export const lambdaHandler = async (
+    event: APIGatewayProxyEvent | ScheduledEvent | SQSEvent,
+): Promise<APIGatewayProxyResult> => {
     try {
+        // Mostrar variables de entorno
+        showEnvironment();
+
         // 🔎 Detectar si el evento es de tipo API Gateway
         if ('httpMethod' in event && 'path' in event) {
             return await router(event as APIGatewayProxyEvent);
@@ -23,6 +29,24 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent | ScheduledEvent
         // 🔎 Detectar si el evento es de tipo EventBridge (Schedule)
         if ('source' in event && event.source === 'aws.events') {
             return await awsEventBridgeHandler(event as ScheduledEvent);
+        }
+
+        // 🔎 Detectar si el evento es de tipo SQS
+        if ('Records' in event && event?.Records?.[0]?.eventSource === 'aws:sqs') {
+            // 📦 Procesar mensajes de SQS
+            for (const record of event?.Records) {
+                // 📦 Procesar cada mensaje
+                const body = JSON.parse(record.body);
+                console.log('📥 Mensaje desde SQS:', body);
+
+                // Logica para ese mensaje
+                // ...............
+            }
+
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ message: 'Mensajes de SQS procesados' }),
+            };
         }
 
         // ⚠️ Evento desconocido

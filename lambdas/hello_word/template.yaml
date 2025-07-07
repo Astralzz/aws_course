@@ -13,38 +13,68 @@ Globals:
     Timeout: 3 # Tiempo máximo de ejecución (en segundos) para las funciones Lambda
 
 Resources:
+  # Cola SQS
+  MyQueue:
+    Type: AWS::SQS::Queue # Recurso de cola SQS administrado por SAM
+    Properties:
+      QueueName: my-sqs-queue # Nombre de la cola SQS
+      VisibilityTimeout: 30 # Tiempo de visibilidad (en segundos)
+      MessageRetentionPeriod: 1209600 # Tiempo de retención de mensajes (en segundos)
+      MaximumMessageSize: 262144 # Tamaño máximo de mensaje (en bytes)
+      ReceiveMessageWaitTime: 10 # Tiempo de espera de mensajes (en segundos)
+
+      # Políticas de reenvío [SQS]
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn # ARN de la cola de reenvío
+        maxReceiveCount: 3 # Número máximo de reintentos
+
   # Definición de la función Lambda principal
   HelloWorldFunction:
+    # Tipo de recurso
     Type: AWS::Serverless::Function # Recurso de función Lambda administrado por SAM
+
+    # Propiedades de la función Lambda
     Properties:
       CodeUri: hello-world/ # Carpeta donde está el código fuente de la función
       Handler: app.lambdaHandler # Punto de entrada de la función Lambda
       Runtime: nodejs18.x # Entorno de ejecución de Node.js versión 18
       Architectures:
         - x86_64 # Arquitectura de la función (x86_64) [x86_64, arm64]
+
+      # Eventos
       Events:
         # Eventos API Gateway
-        HelloWorld:
+
+        # Configuración del endpoint global [Accepta cualquier método HTTP]
+        ProxyApi:
           Type: Api # Evento que dispara la función (API Gateway) [Api, S3, SNS, SQS, Schedule, S3, SNS, SQS, Schedule]
           Properties:
-            Path: /hello # Ruta del endpoint
-            Method: get # Método HTTP permitido [get, post, put, delete, options, head, patch]
-        # Nuevos elementos
-        GetUser:
-          Type: Api
-          Properties:
-            Path: /user/{id}
-            Method: get
-        CreateUser:
-          Type: Api
-          Properties:
-            Path: /user
-            Method: post
-        ShowAllUsers:
-          Type: Api
-          Properties:
-            Path: /users
-            Method: get
+            Path: /api/{proxy+} # Cualquier ruta que empiece con /api/
+            Method: ANY # Cualquier método HTTP
+        
+        # Configuración del endpoint local [Solo GET]
+        # ApiLocal:
+        #   Type: Api # Evento que dispara la función (API Gateway) [Api, S3, SNS, SQS, Schedule, S3, SNS, SQS, Schedule]
+        #   Properties:
+        #     Path: /hello # Ruta del endpoint
+        #     Method: get # Método HTTP permitido [get, post, put, delete, options, head, patch]
+        # # Nuevos elementos
+        # GetUser:
+        #   Type: Api
+        #   Properties:
+        #     Path: /user/{id}
+        #     Method: get
+        # CreateUser:
+        #   Type: Api
+        #   Properties:
+        #     Path: /user
+        #     Method: post
+        # ShowAllUsers:
+        #   Type: Api
+        #   Properties:
+        #     Path: /users
+        #     Method: get
+
         # Eventos Schedule [EventBridge]
         DailySchedule:
           Type: Schedule
@@ -57,6 +87,22 @@ Resources:
             Name: daily-user-check-every-minute
             Schedule: cron(* * * * ? *) # cada minuto
 
+        # Eventos SQS
+        SQSEvent:
+          Type: SQS # Evento que dispara la función (SQS)
+          Properties:
+            Queue: !GetAtt MyQueue.Arn # ARN de la cola SQS
+            BatchSize: 10 # Número de mensajes por batch
+
+      # Variables de entorno
+      Environment:
+        # Variables de entorno
+        Variables:
+          MY_QUEUE_URL: !Ref MyQueue # ARN de la cola SQS
+          STAGE: dev # Entorno de despliegue [dev, prod]
+          OTHER_CONFIG: value123 # Otra configuración
+
+    # Propiedades para la construcción con esbuild
     Metadata: # Propiedades para la construcción con esbuild
       BuildMethod: esbuild
       BuildProperties:
@@ -71,9 +117,11 @@ Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  
+  # Salida de la API Gateway
   HelloWorldApi:
-    Description: 'API Gateway endpoint URL for Prod stage for Hello World function' # URL del endpoint de la API
-    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/'
+    Description: 'API Gateway endpoint base URL for Prod stage'
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/api/'
   HelloWorldFunction:
     Description: 'Hello World Lambda Function ARN' # ARN de la función Lambda creada
     Value: !GetAtt HelloWorldFunction.Arn

@@ -1,0 +1,10 @@
+{
+  "httpMethod": "GET",
+  "path": "/api/user/123",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queryStringParameters": {
+    "verbose": "true"
+  }
+}
